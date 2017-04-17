@@ -1,24 +1,16 @@
 use aliases::{ByteStream};
 use bytes::{BufMut, Bytes, BytesMut, LittleEndian};
-use crc::crc32;
 use futures::{Async, Poll, Stream};
 use snap;
 use std::io;
+
+use shared::{crc32c_masked, FrameType};
 
 // private inside snap :(
 const MAX_BLOCK_SIZE: usize = 1 << 16;
 
 lazy_static! {
   static ref MAX_COMPRESS_BLOCK_SIZE: usize = snap::max_compress_len(MAX_BLOCK_SIZE);
-}
-
-// An enumeration describing each of the 4 main chunk types.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum ChunkType {
-  Stream = 0xff,
-  Compressed = 0x00,
-  Uncompressed = 0x01,
-  Padding = 0xfe,
 }
 
 // special snappy stream magic header
@@ -61,19 +53,19 @@ impl<S> SnappyCompress<S> where S: ByteStream {
     // if the result is >= 7/8 of the original size, skip compression.
     if length >= data.len() - (data.len() / 8) {
       let mut out = BytesMut::with_capacity(data.len() + 8);
-      Self::encode_header(&mut out, ChunkType::Uncompressed, data.len() + 4, crc);
+      Self::encode_header(&mut out, FrameType::Uncompressed, data.len() + 4, crc);
       out.put(data);
       Ok(out.freeze())
     } else {
       let mut out = BytesMut::with_capacity(length + 8);
-      Self::encode_header(&mut out, ChunkType::Compressed, length + 4, crc);
+      Self::encode_header(&mut out, FrameType::Compressed, length + 4, crc);
       out.put(&self.output_buffer[..length]);
       Ok(out.freeze())
     }
   }
 
   // header: type(1), len_le(3), crc_le(4)
-  fn encode_header(out: &mut BytesMut, chunk_type: ChunkType, length: usize, crc: u32) {
+  fn encode_header(out: &mut BytesMut, chunk_type: FrameType, length: usize, crc: u32) {
     out.put_uint::<LittleEndian>(chunk_type as u8 as u64, 1);
     out.put_uint::<LittleEndian>(length as u64, 3);
     out.put_u32::<LittleEndian>(crc);
@@ -106,15 +98,10 @@ impl<S> Stream for SnappyCompress<S> where S: ByteStream {
       self.current_buffer = Some(buffer.split_off(MAX_BLOCK_SIZE));
     }
 
+    // there shouldn't really be errors here, but handle it just in case.
     match self.encode_frame(buffer) {
-      Err(e) => Err(io::Error::new(io::ErrorKind::InvalidInput, e)),
+      Err(e) => Err(io::Error::new(io::ErrorKind::InvalidData, e)),
       Ok(out) => Ok(Async::Ready(Some(out)))
     }
   }
-}
-
-
-fn crc32c_masked(buf: &[u8]) -> u32 {
-  let sum = crc32::checksum_castagnoli(buf);
-  (sum.wrapping_shr(15) | sum.wrapping_shl(17)).wrapping_add(0xa282ead8)
 }

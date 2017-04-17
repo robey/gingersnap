@@ -14,7 +14,7 @@ mod test_compress {
   fn small_data() {
     let s = stream::once(Ok(Bytes::from(&b"hello"[..])));
     let sc = SnappyCompress::new(s);
-    // should just be a 9-byte uncompressed packet
+    // should just be a 9-byte uncompressed frame
     assert_eq!(to_hex(sc), format!("{}{}{}{}", HEADER, "01090000", "bb1f1c19", "68656c6c6f"));
   }
 
@@ -22,7 +22,7 @@ mod test_compress {
   fn compressable() {
     let s = stream::once(Ok(Bytes::from(&b"999999999999999999999999"[..])));
     let sc = SnappyCompress::new(s);
-    // should be a 10-byte compressed packet!
+    // should be a 10-byte compressed frame!
     assert_eq!(to_hex(sc), format!("{}{}{}{}", HEADER, "000a0000", "59772563", "1800395a0100"));
   }
 
