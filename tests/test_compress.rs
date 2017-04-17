@@ -4,7 +4,7 @@ extern crate gingersnap;
 
 #[cfg(test)]
 mod test_compress {
-  use bytes::{Bytes};
+  use bytes::{BufMut, Bytes, BytesMut};
   use futures::{Future, stream};
   use gingersnap::{ByteStream, SnappyCompress};
 
@@ -24,6 +24,17 @@ mod test_compress {
     let sc = SnappyCompress::new(s);
     // should be a 10-byte compressed frame!
     assert_eq!(to_hex(sc), format!("{}{}{}{}", HEADER, "000a0000", "59772563", "1800395a0100"));
+  }
+
+  #[test]
+  fn multi_frame() {
+    let mut crap = BytesMut::with_capacity(32);
+    for _ in 0..32 { crap.put(0 as u8) };
+    let b = crap.freeze();
+    let s = stream::iter(vec![ Ok(b.clone()), Ok(b.clone()), Ok(b.clone()) ]);
+    let sc = SnappyCompress::new(s);
+    let frame = format!("{}{}{}", "000a0000", "faffd70f", "2000007a0100");
+    assert_eq!(to_hex(sc), format!("{}{}{}{}", HEADER, frame, frame, frame));
   }
 
 
