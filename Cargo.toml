@@ -1,0 +1,11 @@
+[package]
+name = "gingersnap"
+version = "0.1.0"
+authors = ["Robey Pointer <robeypointer@gmail.com>"]
+
+[dependencies]
+lazy_static = "0.2.4"
+snap = "0.2"
+futures = "0.1"
+bytes = "0.4"
+crc = "^1.0.0"
