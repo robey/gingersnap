@@ -99,8 +99,6 @@ impl<S> SnappyUncompress<S> where S: ByteStream {
   }
 
   fn process_frame(&mut self, frame_type: Result<FrameType, u8>, data: Bytes) -> Result<Option<Bytes>, io::Error> {
-    println!("Let us decode {:?} len {}", frame_type, data.len());
-
     // some error cases first: expect to have seen at least one magic header, and a known frame type.
     if !self.seen_magic && frame_type != Ok(FrameType::Stream) {
       return Err(io::Error::new(io::ErrorKind::InvalidData, "Not a snappy stream (missing magic header)"));
