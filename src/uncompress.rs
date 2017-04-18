@@ -106,7 +106,7 @@ impl<S> SnappyUncompress<S> where S: ByteStream {
 
     match frame_type {
       Err(b) if 0x02 <= b && b <= 0x7f => {
-        Err(io::Error::new(io::ErrorKind::InvalidData, format!("Unknown chunk type {}", b)))
+        Err(io::Error::new(io::ErrorKind::InvalidData, format!("Unknown frame type {}", b)))
       },
 
       Ok(FrameType::Stream) => {
