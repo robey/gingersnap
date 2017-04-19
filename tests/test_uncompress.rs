@@ -68,8 +68,16 @@ mod test_uncompress {
 
   #[test]
   #[should_panic(expected="CRC mismatch")]
-  fn wrong_crc() {
+  fn wrong_crc_compressed() {
     let s = from_hexes(vec![ HEADER, "000a0000", "ff772563", "1800395a0100" ]);
+    let sc = SnappyUncompress::new(s);
+    to_hex(sc);
+  }
+
+  #[test]
+  #[should_panic(expected="CRC mismatch")]
+  fn wrong_crc_uncompressed() {
+    let s = from_hexes(vec![ HEADER, "01090000", "ff1f1c19", "68656c6c6f" ]);
     let sc = SnappyUncompress::new(s);
     to_hex(sc);
   }
